@@ -39,11 +39,11 @@ To calculate polygenic risk scores in your target dataset using the provided SNP
 
 ## Step 2: Test PRS associations
 
-Below we provide an example for how to test the association between a single PRS and phenotype of interest. Some cohorts may have several phenotypes or genetic ancestries to test and in those cases it may be easier to loop through those groups, so we also provide an example script in this repostiory called multiple_PRS_associations_example.R for those cohorts to refer to. 
+Below we provide an example for how to test the association between a single PRS and phenotype of interest.
 
-The code below will first merge together prs, phenotype and covariate data. Then it will run two logistic regressions, one which includes the PRS as a predicor and one which does not. It is very important that the PRS is scaled (i.e., mean 0, sd 1) so that the effect sizes are standardized and comparable across target datasets. 
+The code below will first merge together prs, phenotype and covariate data. Then it will run two logistic regressions, one which includes the PRS as a predictor and one which does not. It is very important that the PRS is scaled (i.e., mean 0, sd 1) so that the effect sizes are standardized and comparable across target datasets. 
 
-The code also shows how to calculate Nagelkerke's R^2^ and liability R^2^. To calculate R^2^ on the liability scale, you should use the following population prevalences (K): 
+The code also shows how to calculate Nagelkerke's R^2^ (using the fmsb package) and liability R^2^. To calculate R^2^ on the liability scale, you should use the following population prevalences (K): 
 
 | Phenotype | K             |
 | :-------- |--------------:|
@@ -62,11 +62,11 @@ library(lme4)
 library(fmsb)
 
 ## load scores
-scores_df <- read.table("/my/scores/target_PHENO_prs.profile")
+scores_df <- read.table("/my/scores/target_PHENO_prs.profile") ## replace with your score file from plink
 
 ## load phenotypes
 phenos_df <- read.table("target_phenos.txt") %>%
- mutate(PHENO=ifelse(PHENO=1, 0, ifelse(PHENO=2, 1, NA)) ## recode the phenotype properly
+ mutate(PHENO=ifelse(PHENO=1, 0, ifelse(PHENO=2, 1, NA)) ## recode the phenotype properly ## replace PHENO with the name of your phenotype column
 
 ## load covariates
 covs_df <- read.table("target_covs.txt")
@@ -80,10 +80,10 @@ full_df <- left_join(scores_df, phenos_df, by = "IID") %>%
 ## -----------------------------------------------------------
 
 ## run model with PRS
-prs_model <- glm("PHENO ~ scale(SCORE) + PC1 + PC2 + PC3 + PC4 + PC5", family = binomial(link = 'logit'), data = full_df)
+prs_model <- glm("PHENO ~ scale(SCORE) + PC1 + PC2 + PC3 + PC4 + PC5", family = binomial(link = 'logit'), data = full_df) ## replace PHENO with the name of your phenotype column
 
 ## run model without PRS
-base_model <- glm("PHENO ~ PC1 + PC2 + PC3 + PC4 + PC5", family = binomial(link = 'logit'), data = full_df)
+base_model <- glm("PHENO ~ PC1 + PC2 + PC3 + PC4 + PC5", family = binomial(link = 'logit'), data = full_df) ## replace PHENO with the name of your phenotype column
 
 ## -----------------------------------------------------------
 ## R2 calculations -------------------------------------------
@@ -95,7 +95,7 @@ R2N <- (NagelkerkeR2(prs_model)$R2)-(NagelkerkeR2(base_model)$R2)
 ## set some variables that will be used to calc liability R2
 K <- 0.09
 N <- (c(nobs(prs_model))) ## set the N (grabbing this from the model)
-N_cases <- length(which(full_df[[PHENO]]==1))
+N_cases <- length(which(full_df[[PHENO]]==1)) ## replace PHENO with the name of your phenotype column
 P <- N_cases/N
 
 ## calculate liability R2
@@ -123,10 +123,10 @@ prs_results <- cbind("cohort" = "target", ## please use your 5 character cohort 
                     "N"= N))
 
 ## save results
-write.csv(prs_results, "/my/target_PHENO_eur_prs_results.csv", row.names = F)
+write.csv(prs_results, "/my/TARGET_PHENO_ANCESTRY_prs_results.csv", row.names = F) ## replace TARGET, PHENO, and ANCESTRY with appropriate labels
 
 ```
 
 ## Step 3: Share PRS results
 
-Please email the results/csv file(s) to the PGC SUI DRC rep, Sarah Colbert (sarah.colbert@icahn.mssm.edu). 
+Please email the results/csv file(s) to Sarah Colbert (sarah.colbert@icahn.mssm.edu). 
