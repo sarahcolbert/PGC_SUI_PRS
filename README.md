@@ -121,7 +121,7 @@ prs_results <- cbind("cohort" = "target", ## please use your 5 character cohort 
                     "Nagelkerke_R2" = R2N, ## this is Nagelkerke's R2
                     "liability_R2" = R2, ## this is the liability R2
                     "N_cases" = N_cases, 
-                    "N"= N))
+                    "N"= N)
 
 ## save results
 write.csv(prs_results, "/my/TARGET_PHENOX_ANCESTRY_prs_results.csv", row.names = F) ## replace TARGET, PHENOX, and ANCESTRY with appropriate labels
