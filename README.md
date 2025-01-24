@@ -81,10 +81,10 @@ full_df <- inner_join(phenos_df, scores_df, by = c("FID", "IID") %>%
 ## -----------------------------------------------------------
 
 ## run model with PRS
-prs_model <- glm("PHENOX ~ scale(SCORE) + PC1 + PC2 + PC3 + PC4 + PC5", family = binomial(link = 'logit'), data = full_df) ## replace PHENOX with the name of your phenotype column
+prs_model <- glm("PHENOX ~ scale(SCORE) + C1 + C2 + C3 + C4 + C6 + C8 + C14 + C16", family = binomial(link = 'logit'), data = full_df) ## replace with correct PC columns and replace PHENOX with the name of your phenotype column
 
 ## run model without PRS
-base_model <- glm("PHENOX ~ PC1 + PC2 + PC3 + PC4 + PC5", family = binomial(link = 'logit'), data = full_df) ## replace PHENOX with the name of your phenotype column
+base_model <- glm("PHENOX ~ C1 + C2 + C3 + C4 + C6 + C8 + C14 + C16", family = binomial(link = 'logit'), data = full_df) ## replace with correct PC columns and replace PHENOX with the name of your phenotype column
 
 ## -----------------------------------------------------------
 ## R2 calculations -------------------------------------------
