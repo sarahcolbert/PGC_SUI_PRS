@@ -62,7 +62,8 @@ library(lme4)
 library(fmsb)
 
 ## load scores
-scores_df <- read.table("/my/scores/target_PHENOX_prs.profile", h = T) ## replace with your score file from plink
+scores_df <- read.table("/my/scores/target_PHENOX_prs.profile", h = T) %>% ## replace with your score file from plink
+ select(FID, IID, SCORE) 
 
 ## load phenotypes
 phenos_df <- read.table("target_phenos.txt") %>%
@@ -72,8 +73,8 @@ phenos_df <- read.table("target_phenos.txt") %>%
 covs_df <- read.table("target_covs.txt")
 
 ## merge all datasets together (assuming all individuals have a unique IID)
-full_df <- left_join(scores_df, phenos_df, by = "IID") %>%
-  left_join(covs_df, by = "IID")
+full_df <- inner_join(phenos_df, scores_df, by = c("FID", "IID") %>%
+  inner_join(covs_df, by = c("FID", "IID")
 
 ## -----------------------------------------------------------
 ## test associations -----------------------------------------
