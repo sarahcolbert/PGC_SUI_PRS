@@ -62,7 +62,7 @@ library(lme4)
 library(fmsb)
 
 ## load scores
-scores_df <- read.table("/my/scores/target_PHENOX_prs.profile") ## replace with your score file from plink
+scores_df <- read.table("/my/scores/target_PHENOX_prs.profile", h = T) ## replace with your score file from plink
 
 ## load phenotypes
 phenos_df <- read.table("target_phenos.txt") %>%
