@@ -94,7 +94,7 @@ base_model <- glm("PHENOX ~ C1 + C2 + C3 + C4 + C6 + C8 + C14 + C16", family = b
 R2N <- (NagelkerkeR2(prs_model)$R2)-(NagelkerkeR2(base_model)$R2)
 
 ## set some variables that will be used to calc liability R2
-K <- 0.09
+K <- 0.09 ## replace with the correct population prevalence for your phenotype
 N <- (c(nobs(prs_model))) ## set the N (grabbing this from the model)
 N_cases <- length(which(full_df[[PHENOX]]==1)) ## replace PHENOX with the name of your phenotype column
 P <- N_cases/N
