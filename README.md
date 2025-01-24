@@ -66,7 +66,7 @@ scores_df <- read.table("/my/scores/target_PHENOX_prs.profile") ## replace with 
 
 ## load phenotypes
 phenos_df <- read.table("target_phenos.txt") %>%
- mutate(PHENOX=ifelse(PHENOX=1, 0, ifelse(PHENOX=2, 1, NA)) ## recode the phenotype properly ## replace PHENOX with the name of your phenotype column
+ mutate(PHENOX=ifelse(PHENOX==1, 0, ifelse(PHENOX==2, 1, NA)) ## recode the phenotype properly ## replace PHENOX with the name of your phenotype column
 
 ## load covariates
 covs_df <- read.table("target_covs.txt")
