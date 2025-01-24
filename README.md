@@ -45,11 +45,9 @@ phenotype=phenox ## replace phenox with the phenotype code (either si, sa, or sd
 
 ## Step 2: Test PRS associations
 
-Below we provide an example for how to test the association between a single PRS and phenotype of interest.
+Below we provide code for how to test the association between a single PRS and phenotype of interest. You will need to make some edits/replacements in the code chunks which start with **"## !!EDIT:"**
 
-The code below will first merge together prs, phenotype and covariate data. Then it will run two logistic regressions, one which includes the PRS as a predictor and one which does not. It is very important that the PRS is scaled (i.e., mean 0, sd 1) so that the effect sizes are standardized and comparable across target datasets. 
-
-The code also shows how to calculate Nagelkerke's R^2^ (using the fmsb package) and liability R^2^. To calculate R^2^ on the liability scale, you should use the following population prevalences (K): 
+The code will first merge together prs, phenotype and covariate data. Then it will run two logistic regressions, one which includes the PRS as a predictor and one which does not. It will use the regression output to calculate Nagelkerke's R^2^ (using the fmsb package) and liability R^2^. To calculate R^2^ on the liability scale, it uses the following population prevalences (K): 
 
 | Phenotype | K             |
 | :-------- |--------------:|
@@ -80,7 +78,8 @@ target_name <- "target" ## this is your 5 character cohort code (same as what wa
 ancestry <- "eur" ## this is the 3 character ancestry code (same as what was used in the weights file sent to you: afr, eas, eur, or lat)
 phenotype <- "phenox" ## this is the phenotype code (either si, sa, or sd)
 phe_col <- "MYPHENO" ## this is the name of the phenotype column in your phenotype file (incase it is not the same as the phenotype above)
-analyst <- "INITIALS" ## this is the analysts initials
+analyst <- "initials" ## this is the analyst's initials
+out_dir <- "/my/path/output/" ## this is the output directory for the results file
 
 ## -----------------------------------------------------------
 ## !!EDIT: load target files ---------------------------------
@@ -114,7 +113,7 @@ full_df <- inner_join(phenos_df, scores_df, by = c("FID", "IID")) %>%
 ## !!EDIT: test associations ---------------------------------
 ## -----------------------------------------------------------
 
-## for this code chunk please adjust the covariates to include the proper PCs for your cohort
+## for this code chunk please edit the below line to set the regression covariates to include the proper PCs for your cohort
 covariates <- "C1 + C2 + C3 + C4 + C6 + C8 + C14 + C16"
 
 ## run model with PRS
@@ -165,14 +164,11 @@ prs_results <- cbind("cohort" = target_name,
                     "N"= N)
 
 ## -----------------------------------------------------------
-## !!EDIT: Generate results file -----------------------------
+## Generate results file -----------------------------
 ## -----------------------------------------------------------
 
-## please set the output directory for the results file
-out_dir <- "/my/path/output/"
-
-## this line will write the results file
-write.csv(prs_results, paste0(out_dir, "/", target_name, "_", ancestry, "_", phenotype, "_prs_results.csv"), row.names = F) 
+## save the results in specified output directory
+write.csv(prs_results, paste0(out_dir, "/", target_name, "_", ancestry, "_", phenotype, "_", analyst, "_prs_results.csv"), row.names = F) 
 
 ```
 
