@@ -31,10 +31,16 @@ If you encounter any issues or have any questions please reach out to Sarah Colb
 To calculate polygenic risk scores in your target dataset using the provided SNP weights file, you can use the [score function](https://www.cog-genomics.org/plink/1.9/score) from plink. Example code: 
 
 ```
-/my/software/plink/plink \
---bfile /my/target_plink \
---score ${weights_dir}/si_weights_META_all 2 4 6 \
---out /my/scores/target_si_prs
+## set variables
+target=namex ## replace namex your 5 character cohort code (same as what was used in the weights file sent to you)
+ancestry=anc ## replace anc the 3 character ancestry code (same as what was used in the weights file sent to you: afr, eas, eur, or lat)
+phenotype=phenox ## replace phenox with the phenotype code (either si, sa, or sd)
+
+## run scoring in plink (you will need to replace with your paths)
+/my/path/plink/plink \
+--bfile /my/path/plink_bfiles \ 
+--score /my/path/weights/${target}_${ancestry}_${phenotype}_META_pst_eff_a1_b0.5_phi1e-02_all.txt 2 4 6 \
+--out /my/path/${target}_${ancestry}_${phenotype}_prscsx
 ```
 
 ## Step 2: Test PRS associations
@@ -52,8 +58,12 @@ The code also shows how to calculate Nagelkerke's R^2^ (using the fmsb package) 
 | SD        | 0.001         |
 
 ```
+# Author: Sarah Colbert
+# Title: Run PRS associations for PGC SUI cohorts
+# Date: 20250124
+
 ## -----------------------------------------------------------
-## set up ----------------------------------------------------
+## load packages ---------------------------------------------
 ## -----------------------------------------------------------
 
 ## load packages
@@ -61,30 +71,59 @@ library(dplyr)
 library(lme4)
 library(fmsb)
 
-## load scores
-scores_df <- read.table("/my/scores/target_PHENOX_prs.profile", h = T) %>% ## replace with your score file from plink
- select(FID, IID, SCORE) 
+## -----------------------------------------------------------
+## !!EDIT: set up variables ----------------------------------
+## -----------------------------------------------------------
 
-## load phenotypes
-phenos_df <- read.table("target_phenos.txt") %>%
- mutate(PHENOX=ifelse(PHENOX==1, 0, ifelse(PHENOX==2, 1, NA)) %>% na.omit() ## recode the phenotype properly and remove those missing phenotype ## replace PHENOX with the name of your phenotype column
+## please create the following variables
+target_name <- "target" ## this is your 5 character cohort code (same as what was used in the weights file sent to you)
+ancestry <- "eur" ## this is the 3 character ancestry code (same as what was used in the weights file sent to you: afr, eas, eur, or lat)
+phenotype <- "phenox" ## this is the phenotype code (either si, sa, or sd)
+phe_col <- "MYPHENO" ## this is the name of the phenotype column in your phenotype file (incase it is not the same as the phenotype above)
+analyst <- "INITIALS" ## this is the analysts initials
+
+## -----------------------------------------------------------
+## !!EDIT: load target files ---------------------------------
+## -----------------------------------------------------------
+
+## load scores (replace scores file name)
+scores_df <- read.table("/path/to/target_ancestry_phenotype_prscsx.profile", h = T) %>% ## replace with your score file from plink
+ select(FID, IID, SCORE) %>% mutate(FID=as.character(FID), IID=as.character(IID)) ## read ID cols as characters
+
+## load phenotypes (replace phenotype file name)
+## (assumes that phenotype file has an FID and IID column like in PLINK)
+## please remove the mutate() line if your phenotype is already correctly coded with 0,1,NA
+phenos_df <- read.table("target_phenos.txt", h = T) %>%
+ mutate(!!phe_col := ifelse(.data[[phe_col]] == 1, 0, ifelse(.data[[phe_col]] == 2, 1, NA))) %>% ## (remove this line if already coded correctly!!) 
+ filter(!is.na(.data[[phe_col]])) %>% ## remove individuals missing phenotype data
+ mutate(FID=as.character(FID), IID=as.character(IID)) ## read ID cols as characters
 
 ## load covariates
-covs_df <- read.table("target_covs.txt")
+## (assumes that covariate file has an FID and IID column like in PLINK)
+covs_df <- read.table("target_covs.txt", h = T) %>% mutate(FID=as.character(FID), IID=as.character(IID)) ## read ID cols as characters
+
+## -----------------------------------------------------------
+## merge target data -----------------------------------------
+## -----------------------------------------------------------
 
 ## merge all datasets together (assuming all individuals have a unique IID)
-full_df <- inner_join(phenos_df, scores_df, by = c("FID", "IID") %>%
-  inner_join(covs_df, by = c("FID", "IID")
+full_df <- inner_join(phenos_df, scores_df, by = c("FID", "IID")) %>%
+  inner_join(covs_df, by = c("FID", "IID"))
 
 ## -----------------------------------------------------------
-## test associations -----------------------------------------
+## !!EDIT: test associations ---------------------------------
 ## -----------------------------------------------------------
+
+## for this code chunk please adjust the covariates to include the proper PCs for your cohort
+covariates <- "C1 + C2 + C3 + C4 + C6 + C8 + C14 + C16"
 
 ## run model with PRS
-prs_model <- glm("PHENOX ~ scale(SCORE) + C1 + C2 + C3 + C4 + C6 + C8 + C14 + C16", family = binomial(link = 'logit'), data = full_df) ## replace with correct PC columns and replace PHENOX with the name of your phenotype column
+prs_model_text <- paste0(phe_col, " ~ scale(SCORE) + ", covariates)
+prs_model <- glm(prs_model_text, family = binomial(link = 'logit'), data = full_df) 
 
 ## run model without PRS
-base_model <- glm("PHENOX ~ C1 + C2 + C3 + C4 + C6 + C8 + C14 + C16", family = binomial(link = 'logit'), data = full_df) ## replace with correct PC columns and replace PHENOX with the name of your phenotype column
+base_model_text <- paste0(phe_col, " ~ ", covariates)
+base_model <- glm(base_model_text, family = binomial(link = 'logit'), data = full_df) 
 
 ## -----------------------------------------------------------
 ## R2 calculations -------------------------------------------
@@ -94,13 +133,12 @@ base_model <- glm("PHENOX ~ C1 + C2 + C3 + C4 + C6 + C8 + C14 + C16", family = b
 R2N <- (NagelkerkeR2(prs_model)$R2)-(NagelkerkeR2(base_model)$R2)
 
 ## set some variables that will be used to calc liability R2
-K <- 0.09 ## replace with the correct population prevalence for your phenotype
+K <- ifelse(phenotype=="si", 0.09, ifelse(phenotype=="sa", 0.02, ifelse(phenotype=="sd", 0.001, NA))) ## sets population prevalence
 N <- (c(nobs(prs_model))) ## set the N (grabbing this from the model)
-N_cases <- length(which(full_df$PHENOX==1)) ## replace PHENOX with the name of your phenotype column
+N_cases <- length(which(full_df[[phe_col]] == 1))
 P <- N_cases/N
 
 ## calculate liability R2
-## do not need to change anything in this code chunk
 thd = -qnorm(K,0,1) #threshold on normal distribution which truncates the proportion of #disease prevalence
 zv = dnorm(thd) #z (normal density)
 mv = zv/K #mean liability for case
@@ -110,11 +148,14 @@ max=1-P^(2*P)*(1-P)^(2*(1-P))
 R2O=R2N*max #Convert NKR2 back to Cox & Snell R2, equivalent to R2 on observed scale #from a linear model
 R2 = R2O*cv/(1+R2O*theta*cv)
 
+## -----------------------------------------------------------
+## Compile results -------------------------------------------
+## -----------------------------------------------------------
+
 ## compile results into a table
-## please make sure to change the lines that are indicated
-prs_results <- cbind("cohort" = "target", ## please use your 5 character cohort code 
-                    "phenotype" = "PHENOX", ## please indicate one: "si", "sa", "sd"
-                    "ancestry" = "eur", ## please indicate one: "afr", "csa", "eas", "eur", "lat" 
+prs_results <- cbind("cohort" = target_name,  
+                    "phenotype" = phenotype,
+                    "ancestry" = ancestry, 
                     "estimate" = (c(summary(prs_model)$coefficients[2,1])), ## this is the effect size of the PRS so long as the PRS is the first predictor in the model 
                     "se" = (c(summary(prs_model)$coefficients[2,2])), ## this is the standard error of the effect size of the PRS so long as the PRS is the first predictor in the model 
                     "p" = (c(summary(prs_model)$coefficients[2,4])), ## this is the p value of the association with the PRS so long as the PRS is the first predictor in the model
@@ -123,8 +164,15 @@ prs_results <- cbind("cohort" = "target", ## please use your 5 character cohort 
                     "N_cases" = N_cases, 
                     "N"= N)
 
-## save results
-write.csv(prs_results, "/my/TARGET_PHENOX_ANCESTRY_prs_results.csv", row.names = F) ## replace TARGET, PHENOX, and ANCESTRY with appropriate labels
+## -----------------------------------------------------------
+## !!EDIT: Generate results file -----------------------------
+## -----------------------------------------------------------
+
+## please set the output directory for the results file
+out_dir <- "/my/path/output/"
+
+## this line will write the results file
+write.csv(prs_results, paste0(out_dir, "/", target_name, "_", ancestry, "_", phenotype, "_prs_results.csv"), row.names = F) 
 
 ```
 
