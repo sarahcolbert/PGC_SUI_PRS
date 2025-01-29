@@ -14,6 +14,8 @@ If you encounter any issues or have any questions please reach out to Sarah Colb
   * [tidyverse](https://github.com/tidyverse/tidyverse)
   * [lme4](https://cran.r-project.org/web/packages/lme4/index.html)
   * [fmsb](https://cran.r-project.org/web/packages/fmsb/index.html)
+  * [pROC](https://cran.r-project.org/web/packages/pROC/index.html)
+  * [modelr](https://cran.r-project.org/web/packages/modelr/index.html)
 
 #### Data Requirements
 
@@ -68,6 +70,8 @@ The code will first merge together prs, phenotype and covariate data. Then it wi
 library(dplyr)
 library(lme4)
 library(fmsb)
+library(pROC)
+library(modelr)
 
 ## -----------------------------------------------------------
 ## !!EDIT: set up variables ----------------------------------
@@ -148,6 +152,45 @@ R2O=R2N*max #Convert NKR2 back to Cox & Snell R2, equivalent to R2 on observed s
 R2 = R2O*cv/(1+R2O*theta*cv)
 
 ## -----------------------------------------------------------
+## AUC calculation -------------------------------------------
+## -----------------------------------------------------------
+
+## logistic model with score only (copying formulas from ricopili danscore_
+tstS_text <- paste0(phe_col, " ~ scale(SCORE)")
+tstS <- glm(tstS_text, family = binomial(link = 'logit'), data = full_df) 
+
+## calculate AUC
+aucvS <- auc(full_df[[phe_col]],tstS$linear.predictors)
+
+## -----------------------------------------------------------
+## OR calculations -------------------------------------------
+## -----------------------------------------------------------
+
+## residualize
+resids_text <- paste0("scale(SCORE) ~ ", covariates)
+resids_model <- lm(resids_text, data = full_df)
+
+## add residuals to dataframe and order by PRS residual 
+ri <- add_residuals(full_df, resids_model, var = "prs_resid") %>% arrange(prs_resid)
+
+## get top quintile and middle quintile
+quint_N <- floor(nrow(ri)/5)
+top_quint <- tail(ri, n = quint_N) %>% mutate(top_v_mid=1)
+middle_quint <- ri[((quint_N*2)+1):((quint_N*2)+quint_N),] %>% mutate(top_v_mid=0)
+
+## combine the top and middle quintiles to compare
+rio <- rbind(top_quint, middle_quint)
+
+## run models
+or_model_text <- paste0(phe_col, " ~ top_v_mid")
+or_model <- glm(or_model_text, family = binomial(link = 'logit'), data = rio) 
+
+## save ORs and 95% CIs
+ORD <- exp(or_model$coefficients[2])
+ORDL <- exp(or_model$coefficients[2]-1.96*summary(or_model)$coefficients[2,2])
+ORDH <- exp(or_model$coefficients[2]+1.96*summary(or_model)$coefficients[2,2])
+
+## -----------------------------------------------------------
 ## Compile results -------------------------------------------
 ## -----------------------------------------------------------
 
@@ -160,6 +203,10 @@ prs_results <- cbind("cohort" = target_name,
                     "p" = (c(summary(prs_model)$coefficients[2,4])), ## this is the p value of the association with the PRS so long as the PRS is the first predictor in the model
                     "Nagelkerke_R2" = R2N, ## this is Nagelkerke's R2
                     "liability_R2" = R2, ## this is the liability R2
+                    "AUC" = aucvS, ## this is what we think is the most appropriate estimate of AUC attributed to the score (even tho covars are ignored)
+                    "OR" = ORD, ## this is the odds ratio for comparing the top to middle PRS quintile 
+                    "OR_L95" = ORDL, ## lower CI of the OR
+                    "OR_H95" = ORDH, ## upper CI of the OR
                     "N_cases" = N_cases, 
                     "N"= N)
 
