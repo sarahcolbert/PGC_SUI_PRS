@@ -139,6 +139,8 @@ R2N <- (NagelkerkeR2(prs_model)$R2)-(NagelkerkeR2(base_model)$R2)
 K <- ifelse(phenotype=="si", 0.09, ifelse(phenotype=="sa", 0.02, ifelse(phenotype=="sd", 0.001, NA))) ## sets population prevalence
 N <- (c(nobs(prs_model))) ## set the N (grabbing this from the model)
 N_cases <- length(which(full_df[[phe_col]] == 1))
+N_controls <- N-N_cases
+N_eff <- (4*N_cases*N_controls)/(N_cases+N_controls)
 P <- N_cases/N
 
 ## calculate liability R2
@@ -232,7 +234,9 @@ prs_results <- cbind("cohort" = target_name,
                     "AUC_base" = auc_base, ## this is AUC of full model
                     "AUC_full_se" = auc_base_se, ## this is standard error of AUC full
                     "N_cases" = N_cases, 
+                    "N_controls" = N_controls, 
                     "N"= N, 
+                    "N_eff" = N_eff, 
                     "OR_q_N" = nrow(top_q), ## this is N in each quantile used for OR calcs
                     "OR_d_N" = nrow(top_d), ## this is N in each decile used for OR calcs
                     or_results) ## OR calc results
