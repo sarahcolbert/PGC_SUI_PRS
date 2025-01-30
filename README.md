@@ -159,8 +159,10 @@ R2 = R2O*cv/(1+R2O*theta*cv)
 tstS_text <- paste0(phe_col, " ~ scale(SCORE)")
 tstS <- glm(tstS_text, family = binomial(link = 'logit'), data = full_df) 
 
-## calculate AUC
-aucvS <- auc(full_df[[phe_col]],tstS$linear.predictors)
+## calculate AUC and it's SE
+roc_obj <- roc(full_df[[phe_col]],tstS$linear.predictors)
+aucvS <- auc(roc_obj)
+aucvS_se <- sqrt(var(roc_obj)) 
 
 ## -----------------------------------------------------------
 ## OR calculations -------------------------------------------
@@ -225,6 +227,7 @@ prs_results <- cbind("cohort" = target_name,
                     "Nagelkerke_R2" = R2N, ## this is Nagelkerke's R2
                     "liability_R2" = R2, ## this is the liability R2
                     "AUC" = aucvS, ## this is what we think is the most appropriate estimate of AUC attributed to the score (even tho covars are ignored)
+                    "AUC_se" = aucvS_se, ## this is standard error of AUC
                     "N_cases" = N_cases, 
                     "N"= N, 
                     "OR_q_N" = nrow(top_q), ## this is N in each quantile used for OR calcs
