@@ -155,14 +155,15 @@ R2 = R2O*cv/(1+R2O*theta*cv)
 ## AUC calculation -------------------------------------------
 ## -----------------------------------------------------------
 
-## logistic model with score only (copying formulas from ricopili danscore_
-tstS_text <- paste0(phe_col, " ~ scale(SCORE)")
-tstS <- glm(tstS_text, family = binomial(link = 'logit'), data = full_df) 
+## calculate AUC for full model
+roc_obj_prs <- roc(full_df[[phe_col]],prs_model$linear.predictors)
+auc_prs <- auc(roc_obj_prs)
+auc_prs_se <- sqrt(var(roc_obj_prs)) 
 
-## calculate AUC and it's SE
-roc_obj <- roc(full_df[[phe_col]],tstS$linear.predictors)
-aucvS <- auc(roc_obj)
-aucvS_se <- sqrt(var(roc_obj)) 
+## calculate AUC for base model 
+roc_obj_base <- roc(full_df[[phe_col]],base_model$linear.predictors)
+auc_base <- auc(roc_obj_base)
+auc_base_se <- sqrt(var(roc_obj_base)) 
 
 ## -----------------------------------------------------------
 ## OR calculations -------------------------------------------
@@ -226,8 +227,10 @@ prs_results <- cbind("cohort" = target_name,
                     "p" = (c(summary(prs_model)$coefficients[2,4])), ## this is the p value of the association with the PRS so long as the PRS is the first predictor in the model
                     "Nagelkerke_R2" = R2N, ## this is Nagelkerke's R2
                     "liability_R2" = R2, ## this is the liability R2
-                    "AUC" = aucvS, ## this is what we think is the most appropriate estimate of AUC attributed to the score (even tho covars are ignored)
-                    "AUC_se" = aucvS_se, ## this is standard error of AUC
+                    "AUC_full" = auc_prs, ## this is AUC of full model
+                    "AUC_full_se" = auc_prs_se, ## this is standard error of AUC full
+                    "AUC_base" = auc_base, ## this is AUC of full model
+                    "AUC_full_se" = auc_base_se, ## this is standard error of AUC full
                     "N_cases" = N_cases, 
                     "N"= N, 
                     "OR_q_N" = nrow(top_q), ## this is N in each quantile used for OR calcs
