@@ -171,24 +171,45 @@ resids_text <- paste0("scale(SCORE) ~ ", covariates)
 resids_model <- lm(resids_text, data = full_df)
 
 ## add residuals to dataframe and order by PRS residual 
-ri <- add_residuals(full_df, resids_model, var = "prs_resid") %>% arrange(prs_resid)
+resids_df <- add_residuals(full_df, resids_model, var = "prs_resid") %>% arrange(prs_resid)
 
-## get top quintile and middle quintile
-quint_N <- floor(nrow(ri)/5)
-top_quint <- tail(ri, n = quint_N) %>% mutate(top_v_mid=1)
-middle_quint <- ri[((quint_N*2)+1):((quint_N*2)+quint_N),] %>% mutate(top_v_mid=0)
+## get different quantiles
+resids_df$quint <- ntile(resids_df$prs_resid, 5)
+resids_df$dec <- ntile(resids_df$prs_resid, 10)
 
-## combine the top and middle quintiles to compare
-rio <- rbind(top_quint, middle_quint)
+## quintile groups
+top_q <- resids_df %>% filter(quint==5) %>% mutate(top=1)
+mid_q <- resids_df %>% filter(quint==3) %>% mutate(top=0) ## middle quintile
+bot_q <- resids_df %>% filter(quint==1) %>% mutate(top=0) ## bottom quintile
+## decile groups
+top_d <- resids_df %>% filter(dec==10) %>% mutate(top=1)
+mid_d <- resids_df %>% filter(dec==5 | dec==6) %>% mutate(quart=ntile(prs_resid, 4)) %>% filter(quart==2 | quart==3) %>% select(-quart) %>% mutate(top=0) ## middle quintile
+bot_d <- resids_df %>% filter(dec==1) %>% mutate(top=0) ## bottom quintile
 
-## run models
-or_model_text <- paste0(phe_col, " ~ top_v_mid")
-or_model <- glm(or_model_text, family = binomial(link = 'logit'), data = rio) 
+## make different combos of quartiles to compare
+combos <- list(
+  top_mid_q = bind_rows(top_q, mid_q),
+  top_bot_q = bind_rows(top_q, bot_q),
+  top_mid_d = bind_rows(top_d, mid_d),
+  top_bot_d = bind_rows(top_d, bot_d)
+)
 
-## save ORs and 95% CIs
-ORD <- exp(or_model$coefficients[2])
-ORDL <- exp(or_model$coefficients[2]-1.96*summary(or_model)$coefficients[2,2])
-ORDH <- exp(or_model$coefficients[2]+1.96*summary(or_model)$coefficients[2,2])
+## OR functions
+or_model_text <- paste0(phe_col, " ~ top")
+ors <- function(combo){
+    df <- combos[[combo]]
+    or_model <- glm(or_model_text, family = binomial(link = 'logit'), data = df) 
+    OR <- exp(or_model$coefficients[2])
+    ORL <- exp(or_model$coefficients[2]-1.96*summary(or_model)$coefficients[2,2])
+    ORH <- exp(or_model$coefficients[2]+1.96*summary(or_model)$coefficients[2,2])
+    as.data.frame(cbind(OR, ORL, ORH)) %>% 
+        rename(!!paste0("OR_", combo):="OR") %>% 
+        rename(!!paste0("ORL_", combo):="ORL") %>% 
+        rename(!!paste0("ORH_", combo):="ORH")  %>% `rownames<-`( NULL )
+}
+
+## calc ORs and 95% CIs for all combos
+or_results <- bind_cols(lapply(names(combos), ors))
 
 ## -----------------------------------------------------------
 ## Compile results -------------------------------------------
@@ -204,11 +225,11 @@ prs_results <- cbind("cohort" = target_name,
                     "Nagelkerke_R2" = R2N, ## this is Nagelkerke's R2
                     "liability_R2" = R2, ## this is the liability R2
                     "AUC" = aucvS, ## this is what we think is the most appropriate estimate of AUC attributed to the score (even tho covars are ignored)
-                    "OR" = ORD, ## this is the odds ratio for comparing the top to middle PRS quintile 
-                    "OR_L95" = ORDL, ## lower CI of the OR
-                    "OR_H95" = ORDH, ## upper CI of the OR
                     "N_cases" = N_cases, 
-                    "N"= N)
+                    "N"= N, 
+                    "OR_q_N" = nrow(top_q), ## this is N in each quantile used for OR calcs
+                    "OR_d_N" = nrow(top_d), ## this is N in each decile used for OR calcs
+                    or_results) ## OR calc results
 
 ## -----------------------------------------------------------
 ## Generate results file -----------------------------
