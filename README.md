@@ -15,7 +15,6 @@ If you encounter any issues or have any questions please reach out to Sarah Colb
   * [lme4](https://cran.r-project.org/web/packages/lme4/index.html)
   * [fmsb](https://cran.r-project.org/web/packages/fmsb/index.html)
   * [pROC](https://cran.r-project.org/web/packages/pROC/index.html)
-  * [modelr](https://cran.r-project.org/web/packages/modelr/index.html)
 
 #### Data Requirements
 
@@ -74,7 +73,6 @@ library(dplyr)
 library(lme4)
 library(fmsb)
 library(pROC)
-library(modelr)
 
 ## -----------------------------------------------------------
 ## !!EDIT: set up variables ----------------------------------
