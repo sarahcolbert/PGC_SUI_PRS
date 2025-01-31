@@ -52,13 +52,9 @@ gunzip /my/path/weights/${target}_${ancestry}_${phenotype}_META_pst_eff_a1_b0.5_
 
 Below we provide code for how to test the association between a single PRS and phenotype of interest. You will need to make some edits/replacements in the code chunks which start with **"## !!EDIT:"**
 
-The code will first merge together prs, phenotype and covariate data. **These should be the exact phenotypes and covariates used in the GWAS.** Then it will run two logistic regressions, one which includes the PRS as a predictor (PRS+PCs) and one which does not (PCs only). It will use the regression output to calculate Nagelkerke's R^2^ (using the fmsb package) and liability R^2^. To calculate R^2^ on the liability scale, it uses the following population prevalences (K): 
+The code will first merge together prs, phenotype and covariate data. **These should be the exact phenotypes and covariates used in the GWAS.** Then it will run two logistic regressions, one which includes the PRS as a predictor (PRS+PCs) and one which does not (PCs only). It will use the regression output to calculate Nagelkerke's R^2^ (using the fmsb package) and liability R^2^. 
 
-| Phenotype | K             |
-| :-------- |--------------:|
-| SI        | 0.09          |
-| SA        | 0.02          |
-| SD        | 0.001         |
+The script uses a bootstrapping approach that performs 10k resamples to calculate the SE and CIs for the liability R^2^. This step will take ~10 minutes so you may want to run the Rscript inside of a job or interactive session.
 
 ```
 # Author: Sarah Colbert
@@ -193,7 +189,7 @@ wrapper_function <- function(data, indices) {
 }
 
 ## do bootstrapping
-n_resamp <- 1000
+n_resamp <- 10000
 boot_results <- boot(data = full_df, statistic = wrapper_function, R = n_resamp)
 R2_se <- sd(boot_results$t)
 
