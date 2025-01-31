@@ -15,6 +15,7 @@ If you encounter any issues or have any questions please reach out to Sarah Colb
   * [lme4](https://cran.r-project.org/web/packages/lme4/index.html)
   * [fmsb](https://cran.r-project.org/web/packages/fmsb/index.html)
   * [pROC](https://cran.r-project.org/web/packages/pROC/index.html)
+  * [boot](https://cran.r-project.org/web/packages/boot/index.html)
 
 #### Data Requirements
 
@@ -73,6 +74,7 @@ library(dplyr)
 library(lme4)
 library(fmsb)
 library(pROC)
+library(boot)
 
 ## -----------------------------------------------------------
 ## !!EDIT: set up variables ----------------------------------
@@ -115,7 +117,7 @@ joint_df <- inner_join(phenos_df, scores_df, by = c("FID", "IID")) %>%
   inner_join(covs_df, by = c("FID", "IID"))
 
 ## -----------------------------------------------------------
-## !!EDIT: test associations ---------------------------------
+## !!EDIT: set up regression models --------------------------
 ## -----------------------------------------------------------
 
 ## for this code chunk please edit the below line to set the regression covariates to include the proper PCs for your cohort
@@ -124,40 +126,85 @@ covariates <- "C1 + C2 + C3 + C4 + C6 + C8 + C14 + C16"
 ## don't need to edit anything else in this chunk
 ## make model with PRS + covars
 prs_model_text <- paste0(phe_col, " ~ scale(SCORE) + ", covariates)
-## make sure that going forward for all other calcs we only use individuals that were included in above regression (i.e. have all vars available)
-complete_rows <- which(complete.cases(joint_df[, all.vars(as.formula(prs_model_text))]))
-full_df <- joint_df[complete_rows,]
-## run model with PRS + covars
-prs_model <- glm(prs_model_text, family = binomial(link = 'logit'), data = full_df)
-
-## run model without PRS
+## make model without PRS
 base_model_text <- paste0(phe_col, " ~ ", covariates)
-base_model <- glm(base_model_text, family = binomial(link = 'logit'), data = full_df) 
+
+## make sure that going forward for all other calcs we only use individuals that were included in full regression (i.e. have all vars available)
+complete_rows <- which(complete.cases(joint_df[, all.vars(as.formula(prs_model_text))]))
+full_df <- joint_df[complete_rows,] 
 
 ## -----------------------------------------------------------
 ## R2 calculations -------------------------------------------
 ## -----------------------------------------------------------
 
-## calculate R2N
-R2N <- (NagelkerkeR2(prs_model)$R2)-(NagelkerkeR2(base_model)$R2)
 
-## set some variables that will be used to calc liability R2
-K <- ifelse(phenotype=="si", 0.09, ifelse(phenotype %in% c("sa_B1", "sa_B2"), 0.02, ifelse(phenotype=="sd", 0.001, NA))) ## sets population prevalence
-N <- (c(nobs(prs_model))) ## set the N (grabbing this from the model)
-N_cases <- length(which(full_df[[phe_col]] == 1))
-N_controls <- N-N_cases
-N_eff <- (4*N_cases*N_controls)/(N_cases+N_controls)
-P <- N_cases/N
+## make function to calculate liability R2
+lR2 <- function(df, type) {
+  
+  ## run model with PRS + covars
+  prs_model <- glm(prs_model_text, family = binomial(link = 'logit'), data = df)
+  ## run model without PRS (i.e. covars only)
+  base_model <- glm(base_model_text, family = binomial(link = 'logit'), data = df) 
 
-## calculate liability R2
-thd = -qnorm(K,0,1) #threshold on normal distribution which truncates the proportion of #disease prevalence
-zv = dnorm(thd) #z (normal density)
-mv = zv/K #mean liability for case
-theta = mv*(P-K)/(1-K)*(mv*(P-K)/(1-K)-thd) #theta in equation (15)
-cv = K*(1-K)/zv^2*K*(1-K)/(P*(1-P)) #C in equation (15) 
-max=1-P^(2*P)*(1-P)^(2*(1-P))
-R2O=R2N*max #Convert NKR2 back to Cox & Snell R2, equivalent to R2 on observed scale #from a linear model
-R2 = R2O*cv/(1+R2O*theta*cv)
+  ## calculate R2N
+  R2N <- (NagelkerkeR2(prs_model)$R2)-(NagelkerkeR2(base_model)$R2)
+
+  ## set some variables that will be used to calc liability R2
+  K <- ifelse(phenotype=="si", 0.09, ifelse(phenotype=="sa", 0.02, ifelse(phenotype=="sd", 0.001, NA))) ## sets population prevalence
+  N <- nrow(df)
+  N_cases <- length(which(df[[phe_col]] == 1))
+  N_controls <- N-N_cases
+  N_eff <- (4*N_cases*N_controls)/(N_cases+N_controls)
+  P <- N_cases/N
+
+  ## calculate liability R2
+  thd = -qnorm(K,0,1) #threshold on normal distribution which truncates the proportion of #disease prevalence
+  zv = dnorm(thd) #z (normal density)
+  mv = zv/K #mean liability for case
+  theta = mv*(P-K)/(1-K)*(mv*(P-K)/(1-K)-thd) #theta in equation (15)
+  cv = K*(1-K)/zv^2*K*(1-K)/(P*(1-P)) #C in equation (15) 
+  max=1-P^(2*P)*(1-P)^(2*(1-P))
+  R2O=R2N*max #Convert NKR2 back to Cox & Snell R2, equivalent to R2 on observed scale #from a linear model
+  R2 = R2O*cv/(1+R2O*theta*cv)
+
+  ## if main analysis, then return these results
+  if(type=="main"){
+    return(list(R2 = R2, N = N, N_cases = N_cases, N_controls = N_controls, N_eff = N_eff, R2N = R2N, model_beta = (c(summary(prs_model)$coefficients[2,1])), model_se = (c(summary(prs_model)$coefficients[2,2])), model_p = (c(summary(prs_model)$coefficients[2,4]))))
+  }
+
+  # if doing bootstrapping, then only return R2
+  if(type=="boot"){
+    return(R2)
+  }
+}
+
+## calculate main PRS results using the function
+main_prs_results <- lR2(full_df, "main")
+
+## -----------------------------------------------------------
+## bootstrapping to get R2 CIs -------------------------------
+## -----------------------------------------------------------
+
+## create a wrapper function to pass to boot
+wrapper_function <- function(data, indices, prog) {
+  ## progress bar
+  prog$tick()
+  ## resample the data
+  resampled_data <- data[indices, ]
+  ## call lR2 with the "boot" type argument
+  return(lR2(resampled_data, type = "boot"))
+}
+
+## set up progress bar
+n_resamp <- 1000
+pb <- progress_bar$new(total = n_resamp + 1) 
+
+## do bootstrapping
+boot_results <- boot(data = full_df, statistic = wrapper_function, R = n_resamp, prog = pb)
+
+## calculate confidence interval
+R2_95CI_low <- boot_results$t0-(1.96*sd(boot_results$t))
+R2_95CI_high <- boot_results$t0+(1.96*sd(boot_results$t))
 
 ## -----------------------------------------------------------
 ## AUC calculation -------------------------------------------
@@ -241,17 +288,19 @@ OR_Ns_df <- reshape(as.data.frame(do.call(rbind, counts_list)), direction = "wid
 prs_results <- cbind("cohort" = target_name,  
                     "phenotype" = phenotype,
                     "ancestry" = ancestry, 
-                    "estimate" = (c(summary(prs_model)$coefficients[2,1])), ## this is the effect size of the PRS so long as the PRS is the first predictor in the model 
-                    "se" = (c(summary(prs_model)$coefficients[2,2])), ## this is the standard error of the effect size of the PRS so long as the PRS is the first predictor in the model 
-                    "p" = (c(summary(prs_model)$coefficients[2,4])), ## this is the p value of the association with the PRS so long as the PRS is the first predictor in the model
-                    "Nagelkerke_R2" = R2N, ## this is Nagelkerke's R2
-                    "liability_R2" = R2, ## this is the liability R2
+                    "beta" = main_prs_results$model_beta, ## this is the effect size of the PRS so long as the PRS is the first predictor in the model 
+                    "se" = main_prs_results$model_se, ## this is the standard error of the effect size of the PRS so long as the PRS is the first predictor in the model 
+                    "p" = main_prs_results$model_p, ## this is the p value of the association with the PRS so long as the PRS is the first predictor in the model
+                    "Nagelkerke_R2" = main_prs_results$R2N, ## this is Nagelkerke's R2
+                    "liability_R2" = main_prs_results$R2, ## this is the liability R2
+                    "liability_R2_95CI_low" = R2_95CI_low, ## lower range of 95% CI for liability R2
+                    "liability_R2_95CI_high" = R2_95CI_high, ## upper range of 95% CI for liability R2
                     "AUC" = aucvS, ## this is what we think is the most appropriate estimate of AUC attributed to the score (even tho covars are ignored)
                     "AUC_se" = aucvS_se, ## this is standard error of AUC
-                    "N_cases" = N_cases, 
-                    "N_controls" = N_controls, 
-                    "N"= N, 
-                    "N_eff" = N_eff, 
+                    "N_cases" = main_prs_results$N_cases, 
+                    "N_controls" = main_prs_results$N_controls, 
+                    "N"= main_prs_results$N, 
+                    "N_eff" = main_prs_results$N_eff, 
                     or_results, ## OR calc results
                     OR_Ns_df) ## OR quantile group counts
 
