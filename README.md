@@ -179,11 +179,11 @@ aucvS_se <- sqrt(var(roc_obj))
 ## -----------------------------------------------------------
 
 ## residualize
-resids_text <- paste0("scale(SCORE) ~ ", covariates)
+resids_text <- paste0("SCORE ~ ", covariates)
 resids_model <- lm(resids_text, data = full_df)
 
-## add residuals to dataframe and order by PRS residual 
-resids_df <- add_residuals(full_df, resids_model, var = "prs_resid") %>% arrange(prs_resid)
+## add standardized residuals to dataframe
+resids_df <- full_df %>% mutate(prs_resid=rstandard(resids_model))
 
 ## get different quantiles
 resids_df$quint <- ntile(resids_df$prs_resid, 5)
