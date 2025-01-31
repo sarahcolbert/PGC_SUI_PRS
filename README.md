@@ -30,13 +30,16 @@ If you encounter any issues or have any questions please reach out to Sarah Colb
 
 ## Step 1: Score individuals using PLINK
 
-To calculate polygenic risk scores in your target dataset using the provided SNP weights file, you can use the [score function](https://www.cog-genomics.org/plink/1.9/score) from plink. Example code: 
+To calculate polygenic risk scores in your target dataset using the provided SNP weights file on google drive, you can use the [score function](https://www.cog-genomics.org/plink/1.9/score) from plink. Please note that after downloading the weights files, the code below decompresses them, so you don't need to do so prior. Example code: 
 
 ```
 ## set variables
 target=namex ## replace namex your 5 character cohort code (same as what was used in the weights file sent to you)
 ancestry=anc ## replace anc the 3 character ancestry code (same as what was used in the weights file sent to you: afr, eas, eur, or lat)
 phenotype=phenox ## replace phenox with the phenotype code (either si, sa, or sd)
+
+## decompress weights file for use in plink
+gunzip /my/path/weights/${target}_${ancestry}_${phenotype}_META_pst_eff_a1_b0.5_phi1e-02_all.txt.gz
 
 ## run scoring in plink (you will need to replace with your paths)
 /my/path/plink/plink \
