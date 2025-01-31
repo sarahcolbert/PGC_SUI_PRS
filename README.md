@@ -195,10 +195,11 @@ wrapper_function <- function(data, indices) {
 ## do bootstrapping
 n_resamp <- 1000
 boot_results <- boot(data = full_df, statistic = wrapper_function, R = n_resamp)
+R2_se <- sd(boot_results$t)
 
 ## calculate confidence interval
-R2_95CI_low <- boot_results$t0-(1.96*sd(boot_results$t))
-R2_95CI_high <- boot_results$t0+(1.96*sd(boot_results$t))
+R2_95CI_low <- boot_results$t0-(1.96*R2_se)
+R2_95CI_high <- boot_results$t0+(1.96*R2_se)
 
 ## -----------------------------------------------------------
 ## AUC calculation -------------------------------------------
@@ -287,6 +288,7 @@ prs_results <- cbind("cohort" = target_name,
                     "p" = main_prs_results$model_p, ## this is the p value of the association with the PRS so long as the PRS is the first predictor in the model
                     "Nagelkerke_R2" = main_prs_results$R2N, ## this is Nagelkerke's R2
                     "liability_R2" = main_prs_results$R2, ## this is the liability R2
+                    "liability_R2_se" = R2_se, ## this is se of liability R2 from bootstrapping
                     "liability_R2_95CI_low" = R2_95CI_low, ## lower range of 95% CI for liability R2
                     "liability_R2_95CI_high" = R2_95CI_high, ## upper range of 95% CI for liability R2
                     "AUC" = aucvS, ## this is what we think is the most appropriate estimate of AUC attributed to the score (even tho covars are ignored)
