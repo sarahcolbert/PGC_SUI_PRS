@@ -123,9 +123,14 @@ full_df <- inner_join(phenos_df, scores_df, by = c("FID", "IID")) %>%
 ## for this code chunk please edit the below line to set the regression covariates to include the proper PCs for your cohort
 covariates <- "C1 + C2 + C3 + C4 + C6 + C8 + C14 + C16"
 
-## run model with PRS
+## don't need to edit anything else in this chunk
+## make model with PRS + covars
 prs_model_text <- paste0(phe_col, " ~ scale(SCORE) + ", covariates)
-prs_model <- glm(prs_model_text, family = binomial(link = 'logit'), data = full_df) 
+## make sure that going forward for all other calcs we only use individuals that were included in above regression (i.e. have all vars available)
+complete_rows <- which(complete.cases(joint_df[, all.vars(as.formula(prs_model_text))]))
+full_df <- joint_df[complete_rows,]
+## run model with PRS + covars
+prs_model <- glm(prs_model_text, family = binomial(link = 'logit'), data = full_df)
 
 ## run model without PRS
 base_model_text <- paste0(phe_col, " ~ ", covariates)
