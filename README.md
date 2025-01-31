@@ -305,7 +305,7 @@ prs_results <- cbind("cohort" = target_name,
 ## -----------------------------------------------------------
 
 ## save the results in specified output directory
-write.csv(prs_results, paste0(out_dir, "/", target_name, "_", ancestry, "_", phenotype, "_", analyst, "_prs_results.csv"), row.names = F) 
+write.csv(prs_results, paste0(out_dir, "/", target_name, "_", ancestry, "_", phenotype, "_", analyst, format(Sys.Date(),"_%Y%m%d"), "_prs_results.csv"), row.names = F) 
 
 ```
 
