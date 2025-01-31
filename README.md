@@ -52,7 +52,7 @@ gunzip /my/path/weights/${target}_${ancestry}_${phenotype}_META_pst_eff_a1_b0.5_
 
 Below we provide code for how to test the association between a single PRS and phenotype of interest. You will need to make some edits/replacements in the code chunks which start with **"## !!EDIT:"**
 
-The code will first merge together prs, phenotype and covariate data. Then it will run two logistic regressions, one which includes the PRS as a predictor and one which does not. It will use the regression output to calculate Nagelkerke's R^2^ (using the fmsb package) and liability R^2^. To calculate R^2^ on the liability scale, it uses the following population prevalences (K): 
+The code will first merge together prs, phenotype and covariate data. **These should be the exact phenotypes and covariates used in the GWAS.** Then it will run two logistic regressions, one which includes the PRS as a predictor (PRS+PCs) and one which does not (PCs only). It will use the regression output to calculate Nagelkerke's R^2^ (using the fmsb package) and liability R^2^. To calculate R^2^ on the liability scale, it uses the following population prevalences (K): 
 
 | Phenotype | K             |
 | :-------- |--------------:|
@@ -63,7 +63,7 @@ The code will first merge together prs, phenotype and covariate data. Then it wi
 ```
 # Author: Sarah Colbert
 # Title: Run PRS associations for PGC SUI cohorts
-# Date: 20250124
+# Date: 20250131
 
 ## -----------------------------------------------------------
 ## load packages ---------------------------------------------
@@ -160,15 +160,14 @@ R2 = R2O*cv/(1+R2O*theta*cv)
 ## AUC calculation -------------------------------------------
 ## -----------------------------------------------------------
 
-## calculate AUC for full model
-roc_obj_prs <- roc(full_df[[phe_col]],prs_model$linear.predictors)
-auc_prs <- auc(roc_obj_prs)
-auc_prs_se <- sqrt(var(roc_obj_prs)) 
+## logistic model with score only (copying formulas from ricopili danscore_3)
+tstS_text <- paste0(phe_col, " ~ scale(SCORE)")
+tstS <- glm(tstS_text, family = binomial(link = 'logit'), data = full_df)
 
-## calculate AUC for base model 
-roc_obj_base <- roc(full_df[[phe_col]],base_model$linear.predictors)
-auc_base <- auc(roc_obj_base)
-auc_base_se <- sqrt(var(roc_obj_base)) 
+## calculate AUC and it's SE
+roc_obj <- roc(full_df[[phe_col]],tstS$linear.predictors)
+aucvS <- auc(roc_obj)
+aucvS_se <- sqrt(var(roc_obj)) 
 
 ## -----------------------------------------------------------
 ## OR calculations -------------------------------------------
@@ -232,10 +231,8 @@ prs_results <- cbind("cohort" = target_name,
                     "p" = (c(summary(prs_model)$coefficients[2,4])), ## this is the p value of the association with the PRS so long as the PRS is the first predictor in the model
                     "Nagelkerke_R2" = R2N, ## this is Nagelkerke's R2
                     "liability_R2" = R2, ## this is the liability R2
-                    "AUC_full" = auc_prs, ## this is AUC of full model
-                    "AUC_full_se" = auc_prs_se, ## this is standard error of AUC full
-                    "AUC_base" = auc_base, ## this is AUC of full model
-                    "AUC_full_se" = auc_base_se, ## this is standard error of AUC full
+                    "AUC" = aucvS, ## this is what we think is the most appropriate estimate of AUC attributed to the score (even tho covars are ignored)
+                    "AUC_se" = aucvS_se, ## this is standard error of AUC
                     "N_cases" = N_cases, 
                     "N_controls" = N_controls, 
                     "N"= N, 
