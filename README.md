@@ -137,7 +137,6 @@ full_df <- joint_df[complete_rows,]
 ## R2 calculations -------------------------------------------
 ## -----------------------------------------------------------
 
-
 ## make function to calculate liability R2
 lR2 <- function(df, type) {
   
@@ -186,21 +185,16 @@ main_prs_results <- lR2(full_df, "main")
 ## -----------------------------------------------------------
 
 ## create a wrapper function to pass to boot
-wrapper_function <- function(data, indices, prog) {
-  ## progress bar
-  prog$tick()
+wrapper_function <- function(data, indices) {
   ## resample the data
   resampled_data <- data[indices, ]
   ## call lR2 with the "boot" type argument
   return(lR2(resampled_data, type = "boot"))
 }
 
-## set up progress bar
-n_resamp <- 1000
-pb <- progress_bar$new(total = n_resamp + 1) 
-
 ## do bootstrapping
-boot_results <- boot(data = full_df, statistic = wrapper_function, R = n_resamp, prog = pb)
+n_resamp <- 1000
+boot_results <- boot(data = full_df, statistic = wrapper_function, R = n_resamp)
 
 ## calculate confidence interval
 R2_95CI_low <- boot_results$t0-(1.96*sd(boot_results$t))
