@@ -113,7 +113,7 @@ covs_df <- read.table("target_covs.txt", h = T) %>% mutate(FID=as.character(FID)
 ## -----------------------------------------------------------
 
 ## merge all datasets together (assuming all individuals have a unique IID)
-full_df <- inner_join(phenos_df, scores_df, by = c("FID", "IID")) %>%
+joint_df <- inner_join(phenos_df, scores_df, by = c("FID", "IID")) %>%
   inner_join(covs_df, by = c("FID", "IID"))
 
 ## -----------------------------------------------------------
