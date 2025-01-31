@@ -35,7 +35,7 @@ To calculate polygenic risk scores in your target dataset using the provided SNP
 ## set variables
 target=namex ## replace namex your 5 character cohort code (same as what was used in the weights file sent to you)
 ancestry=anc ## replace anc the 3 character ancestry code (same as what was used in the weights file sent to you: afr, eas, eur, or lat)
-phenotype=phenox ## replace phenox with the phenotype code (either si, sa, or sd)
+phenotype=phenox ## replace phenox with the phenotype code (either si, sa_B1, sa_B2, or sd)
 
 ## decompress weights file for use in plink
 gunzip /my/path/weights/${target}_${ancestry}_${phenotype}_META_pst_eff_a1_b0.5_phi1e-02_all.txt.gz
@@ -81,7 +81,7 @@ library(pROC)
 ## please create the following variables
 target_name <- "target" ## this is your 5 character cohort code (same as what was used in the weights file sent to you)
 ancestry <- "eur" ## this is the 3 character ancestry code (same as what was used in the weights file sent to you: afr, eas, eur, or lat)
-phenotype <- "phenox" ## this is the phenotype code (either si, sa, or sd)
+phenotype <- "phenox" ## this is the phenotype code (either si, sa_B1, sa_B2, or sd)
 phe_col <- "MYPHENO" ## this is the name of the phenotype column in your phenotype file (incase it is not the same as the phenotype above)
 analyst <- "initials" ## this is the analyst's initials
 out_dir <- "/my/path/output/" ## this is the output directory for the results file
@@ -142,7 +142,7 @@ base_model <- glm(base_model_text, family = binomial(link = 'logit'), data = ful
 R2N <- (NagelkerkeR2(prs_model)$R2)-(NagelkerkeR2(base_model)$R2)
 
 ## set some variables that will be used to calc liability R2
-K <- ifelse(phenotype=="si", 0.09, ifelse(phenotype=="sa", 0.02, ifelse(phenotype=="sd", 0.001, NA))) ## sets population prevalence
+K <- ifelse(phenotype=="si", 0.09, ifelse(phenotype %in% c("sa_B1", "sa_B2"), 0.02, ifelse(phenotype=="sd", 0.001, NA))) ## sets population prevalence
 N <- (c(nobs(prs_model))) ## set the N (grabbing this from the model)
 N_cases <- length(which(full_df[[phe_col]] == 1))
 N_controls <- N-N_cases
