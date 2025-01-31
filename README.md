@@ -218,6 +218,18 @@ ors <- function(combo){
 ## calc ORs and 95% CIs for all combos
 or_results <- bind_cols(lapply(names(combos), ors))
 
+## save some of the Ns from the quantiles to report
+quant_df_names <- c("top_q", "mid_q", "bot_q", "top_d", "mid_d", "bot_d")
+## create list with counts of cases and controls in each quantile group
+counts_list <- lapply(quant_df_names, function(df) {
+  tab <- table(get(df)[[phe_col]]) 
+  data.frame(id = 1, quant_name = df,
+    Ncases = ifelse("1" %in% names(tab), tab["1"], 0), Ncontrols = ifelse("0" %in% names(tab), tab["0"], 0)
+  )
+})
+## make list of counts into a df
+OR_Ns_df <- reshape(as.data.frame(do.call(rbind, counts_list)), direction = "wide", idvar="id", timevar="quant_name") %>% select(-id)
+
 ## -----------------------------------------------------------
 ## Compile results -------------------------------------------
 ## -----------------------------------------------------------
@@ -237,9 +249,8 @@ prs_results <- cbind("cohort" = target_name,
                     "N_controls" = N_controls, 
                     "N"= N, 
                     "N_eff" = N_eff, 
-                    "OR_q_N" = nrow(top_q), ## this is N in each quantile used for OR calcs
-                    "OR_d_N" = nrow(top_d), ## this is N in each decile used for OR calcs
-                    or_results) ## OR calc results
+                    or_results, ## OR calc results
+                    OR_Ns_df) ## OR quantile group counts
 
 ## -----------------------------------------------------------
 ## Generate results file -----------------------------
