@@ -34,8 +34,8 @@ To calculate polygenic risk scores in your target dataset using the provided SNP
 
 ```
 ## set variables
-target=namex ## replace namex your 5 character cohort code (same as what was used in the weights file sent to you)
-ancestry=anc ## replace anc the 3 character ancestry code (same as what was used in the weights file sent to you: afr, eas, eur, or lat)
+target=namex ## replace namex with your 5 character cohort code (same as in the weights file sent to you)
+ancestry=anc ## replace anc with the 3 character ancestry code (same as in the weights file sent to you: afr, eas, eur, or lat)
 phenotype=phenox ## replace phenox with the phenotype code (either si, sa_B1, sa_B2, or sd)
 
 ## decompress weights file for use in plink
