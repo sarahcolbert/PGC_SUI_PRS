@@ -82,6 +82,8 @@ lR2 <- function(df, type) {
   ## run model without PRS (i.e. covars only)
   base_model <- glm(base_model_text, family = binomial(link = 'logit'), data = df) 
 
+  ## calculate p-value
+  prs_pval <- anova(prs_model, base_model, test="Chi")[2,5] 
   ## calculate R2N
   R2N <- (NagelkerkeR2(prs_model)$R2)-(NagelkerkeR2(base_model)$R2)
 
@@ -105,7 +107,7 @@ lR2 <- function(df, type) {
 
   ## if main analysis, then return these results
   if(type=="main"){
-    return(list(R2 = R2, N = N, N_cases = N_cases, N_controls = N_controls, N_eff = N_eff, R2N = R2N, model_beta = (c(summary(prs_model)$coefficients[2,1])), model_se = (c(summary(prs_model)$coefficients[2,2])), model_p = (c(summary(prs_model)$coefficients[2,4]))))
+    return(list(R2 = R2, N = N, N_cases = N_cases, N_controls = N_controls, N_eff = N_eff, R2N = R2N, model_beta = (c(summary(prs_model)$coefficients[2,1])), model_se = (c(summary(prs_model)$coefficients[2,2])), model_p = prs_pval))
   }
 
   # if doing bootstrapping, then only return R2
