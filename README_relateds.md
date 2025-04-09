@@ -60,11 +60,11 @@ gunzip /my/path/weights/${target}_${ancestry}_${phenotype}_META_pst_eff_a1_b0.5_
 
 ## Step 2: Test PRS associations
 
-The script [pgcsui_prs_step2.R](https://github.com/sarahcolbert/PGC_SUI_PRS/blob/main/pgcsui_prs_step2.R) provides code for how to test the association between a single PRS and phenotype of interest. You will need to make some edits/replacements in the code chunks which start with **"## !!EDIT:"**
+The script [pgcsui_prs_wrels_step2.R](https://github.com/sarahcolbert/PGC_SUI_PRS/blob/main/pgcsui_prs_wrels_step2.R) provides code for how to test the association between a single PRS and phenotype of interest. You will need to make some edits/replacements in the code chunks which start with **"## !!EDIT:"**
 
 The code will first merge together prs, phenotype and covariate data. **These should be the exact phenotypes and covariates used in the GWAS.** 
 
-Then it will run two logistic regressions, one which includes the PRS as a predictor (PRS+PCs) and one which does not (PCs only). It will use the regression output to calculate Nagelkerke's R<sup>2</sup> (using the fmsb package) and liability R<sup>2</sup>. The code will also calculate odds ratios and the AUC. It will then compile all the results into a single csv file that will be shared. 
+Then it will run two mixed-effects models, one which includes the PRS as a predictor (PRS+PCs+FID) and one which does not (PCs+FID only). It will use the regression output to calculate Nakagawa's R<sup>2</sup> (using the performance package) and liability R<sup>2</sup>. The code will also calculate odds ratios and the AUC. It will then compile all the results into a single csv file that will be shared. 
 
 The script uses a bootstrapping approach that performs 10k resamples to calculate the SE and CIs for the liability R<sup>2</sup>. This step will take ~10 minutes so you may want to run the Rscript inside of a job or interactive session.
 

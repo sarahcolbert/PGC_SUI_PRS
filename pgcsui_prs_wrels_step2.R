@@ -122,7 +122,7 @@ lR2 <- function(df, type) {
 main_prs_results <- lR2(full_df, "main")
 
 ## -----------------------------------------------------------
-## bootstrapping to get R2 CIs (WIP) -------------------------------
+## bootstrapping to get R2 CIs -------------------------------
 ## -----------------------------------------------------------
 
 ## create a wrapper function to pass to boot
@@ -143,15 +143,18 @@ R2_95CI_low <- boot_results$t0-(1.96*R2_se)
 R2_95CI_high <- boot_results$t0+(1.96*R2_se)
 
 ## -----------------------------------------------------------
-## AUC calculation (WIP) -------------------------------------------
+## AUC calculation -------------------------------------------
 ## -----------------------------------------------------------
 
 ## logistic model with score only (copying formulas from ricopili danscore_3)
-tstS_text <- paste0(phe_col, " ~ scale(SCORE)")
-tstS <- glm(tstS_text, family = binomial(link = 'logit'), data = full_df)
+tstS_text <- paste0(phe_col, " ~ scale(SCORE) + (1 | FID)")
+tstS <- glmer(tstS_text, family = binomial(link = 'probit'), data = full_df)
+
+## get predictors
+predictors <- predict(tstS, type = "link", re.form = NA)
 
 ## calculate AUC and it's SE
-roc_obj <- roc(full_df[[phe_col]],tstS$linear.predictors)
+roc_obj <- roc(full_df[[phe_col]],predictors)
 aucvS <- auc(roc_obj)
 aucvS_se <- sqrt(var(roc_obj)) 
 
