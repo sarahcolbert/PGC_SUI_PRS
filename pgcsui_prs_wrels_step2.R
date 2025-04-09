@@ -77,17 +77,12 @@ full_df <- joint_df[complete_rows,]
 ## make function to calculate liability R2
 lR2 <- function(df, type) {
   
-  ## set optimizer for main model vs. boot
-  if(type == "boot"){
-    ctrl <- glmerControl(optimizer = "bobyqa", optCtrl = list(maxfun = 1e4))
-  } else {
-    ctrl <- glmerControl(optimizer = "bobyqa", optCtrl = list(maxfun = 2e5))
-  }
-
+  ## set optimizer 
+  ctrl <- glmerControl(optimizer = "bobyqa", optCtrl = list(maxfun = 2e5))
   ## run model with PRS + covars
   prs_model <- glmer(prs_model_text, family = binomial(link = 'probit'), data = df, control = ctrl)
   ## run model without PRS (i.e. covars only)
-  base_model <- glmer(base_model_text, family = binomial(link = 'probit'), data = df, control = ctrl) 
+  base_model <- glmer(base_model_text, family = binomial(link = 'probit'), data = df, control = ctrl)  
 
   ## calculate p-value
   prs_pval <- anova(prs_model, base_model, test="Chi")[2,8] 
@@ -126,3 +121,131 @@ lR2 <- function(df, type) {
 ## calculate main PRS results using the function
 main_prs_results <- lR2(full_df, "main")
 
+## -----------------------------------------------------------
+## bootstrapping to get R2 CIs (WIP) -------------------------------
+## -----------------------------------------------------------
+
+## create a wrapper function to pass to boot
+wrapper_function <- function(data, indices) {
+  ## resample the data
+  resampled_data <- data[indices, ]
+  ## call lR2 with the "boot" type argument
+  return(lR2(resampled_data, type = "boot"))
+}
+
+## do bootstrapping
+n_resamp <- 10000
+boot_results <- boot(data = full_df, statistic = wrapper_function, R = n_resamp)
+R2_se <- sd(boot_results$t)
+
+## calculate confidence interval
+R2_95CI_low <- boot_results$t0-(1.96*R2_se)
+R2_95CI_high <- boot_results$t0+(1.96*R2_se)
+
+## -----------------------------------------------------------
+## AUC calculation (WIP) -------------------------------------------
+## -----------------------------------------------------------
+
+## logistic model with score only (copying formulas from ricopili danscore_3)
+tstS_text <- paste0(phe_col, " ~ scale(SCORE)")
+tstS <- glm(tstS_text, family = binomial(link = 'logit'), data = full_df)
+
+## calculate AUC and it's SE
+roc_obj <- roc(full_df[[phe_col]],tstS$linear.predictors)
+aucvS <- auc(roc_obj)
+aucvS_se <- sqrt(var(roc_obj)) 
+
+## -----------------------------------------------------------
+## OR calculations -------------------------------------------
+## -----------------------------------------------------------
+
+## residualize
+resids_text <- paste0("SCORE ~ ", covariates, " + (1 | FID)")
+resids_model <- lmer(resids_text, data = full_df)
+
+## add standardized residuals to dataframe
+raw_resid <- resid(resids_model)
+sd_resid <- sd(raw_resid)
+resids_df <- full_df %>% mutate(prs_resid = raw_resid / sd_resid)
+
+## get different quantiles
+resids_df$quint <- ntile(resids_df$prs_resid, 5)
+resids_df$dec <- ntile(resids_df$prs_resid, 10)
+
+## quintile groups
+top_q <- resids_df %>% filter(quint==5) %>% mutate(top=1)
+mid_q <- resids_df %>% filter(quint==3) %>% mutate(top=0) ## middle quintile
+bot_q <- resids_df %>% filter(quint==1) %>% mutate(top=0) ## bottom quintile
+## decile groups
+top_d <- resids_df %>% filter(dec==10) %>% mutate(top=1)
+mid_d <- resids_df %>% filter(dec==5 | dec==6) %>% mutate(quart=ntile(prs_resid, 4)) %>% filter(quart==2 | quart==3) %>% select(-quart) %>% mutate(top=0) ## middle quintile
+bot_d <- resids_df %>% filter(dec==1) %>% mutate(top=0) ## bottom quintile
+
+## make different combos of quartiles to compare
+combos <- list(
+  top_mid_q = bind_rows(top_q, mid_q),
+  top_bot_q = bind_rows(top_q, bot_q),
+  top_mid_d = bind_rows(top_d, mid_d),
+  top_bot_d = bind_rows(top_d, bot_d)
+)
+
+## OR functions
+or_model_text <- paste0(phe_col, " ~ top")
+ors <- function(combo){
+    df <- combos[[combo]]
+    or_model <- glm(or_model_text, family = binomial(link = 'logit'), data = df) 
+    OR <- exp(or_model$coefficients[2])
+    ORL <- exp(or_model$coefficients[2]-1.96*summary(or_model)$coefficients[2,2])
+    ORH <- exp(or_model$coefficients[2]+1.96*summary(or_model)$coefficients[2,2])
+    as.data.frame(cbind(OR, ORL, ORH)) %>% 
+        rename(!!paste0("OR_", combo):="OR") %>% 
+        rename(!!paste0("ORL_", combo):="ORL") %>% 
+        rename(!!paste0("ORH_", combo):="ORH")  %>% `rownames<-`( NULL )
+}
+
+## calc ORs and 95% CIs for all combos
+or_results <- bind_cols(lapply(names(combos), ors))
+
+## save some of the Ns from the quantiles to report
+quant_df_names <- c("top_q", "mid_q", "bot_q", "top_d", "mid_d", "bot_d")
+## create list with counts of cases and controls in each quantile group
+counts_list <- lapply(quant_df_names, function(df) {
+  tab <- table(get(df)[[phe_col]]) 
+  data.frame(id = 1, quant_name = df,
+    Ncases = ifelse("1" %in% names(tab), tab["1"], 0), Ncontrols = ifelse("0" %in% names(tab), tab["0"], 0)
+  )
+})
+## make list of counts into a df
+OR_Ns_df <- reshape(as.data.frame(do.call(rbind, counts_list)), direction = "wide", idvar="id", timevar="quant_name") %>% select(-id)
+
+## -----------------------------------------------------------
+## Compile results -------------------------------------------
+## -----------------------------------------------------------
+
+## compile results into a table
+prs_results <- cbind("cohort" = target_name,  
+                    "phenotype" = phenotype,
+                    "ancestry" = ancestry, 
+                    "beta" = main_prs_results$model_beta, ## this is the effect size of the PRS so long as the PRS is the first predictor in the model 
+                    "se" = main_prs_results$model_se, ## this is the standard error of the effect size of the PRS so long as the PRS is the first predictor in the model 
+                    "p" = main_prs_results$model_p, ## this is the p value of the association with the PRS so long as the PRS is the first predictor in the model
+                    "Nagelkerke_R2" = main_prs_results$R2N, ## this is Nagelkerke's R2
+                    "liability_R2" = main_prs_results$R2, ## this is the liability R2
+                    "liability_R2_se" = R2_se, ## this is se of liability R2 from bootstrapping
+                    "liability_R2_95CI_low" = R2_95CI_low, ## lower range of 95% CI for liability R2
+                    "liability_R2_95CI_high" = R2_95CI_high, ## upper range of 95% CI for liability R2
+                    "AUC" = aucvS, ## this is what we think is the most appropriate estimate of AUC attributed to the score (even tho covars are ignored)
+                    "AUC_se" = aucvS_se, ## this is standard error of AUC
+                    "N_cases" = main_prs_results$N_cases, 
+                    "N_controls" = main_prs_results$N_controls, 
+                    "N"= main_prs_results$N, 
+                    "N_eff" = main_prs_results$N_eff, 
+                    or_results, ## OR calc results
+                    OR_Ns_df) ## OR quantile group counts
+
+## -----------------------------------------------------------
+## Generate results file -----------------------------
+## -----------------------------------------------------------
+
+## save the results in specified output directory
+write.csv(prs_results, paste0(out_dir, "/", target_name, "_", ancestry, "_", phenotype, "_", analyst, format(Sys.Date(),"_%Y%m%d"), "_prs_results.csv"), row.names = F) 
