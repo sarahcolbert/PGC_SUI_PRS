@@ -24,11 +24,9 @@ If you encounter any issues or have any questions please reach out to Sarah Colb
 
 2) Imputed allele dosages or best guess genotypes (imputed allele dosages converted to hard calls) in plink binary format are both fine. Please only include individuals who were included in the GWAS. Furthermore, please filter your sample to include at max two first-degree relatives per family, while prioritizing cases. The process for doing so is described in [Pre-Step: Relatives Identification and Filtering](#pre-step-relatives-identification-and-filtering).
 
-3) Phenotype data for all available phenotypes (these should exactly match the cases and controls used for the GWAS). As phenotypes are likely to be coded in PLINK .pheno file format (2,1,-9 coding), we provide code in step 2 which will recode the phenotype such that cases = 1, controls = 0 and those with missing phenotypes are NA. **IF THE PHENOTYPE IS ALREADY CODED CORRECTLY (1,0,NA) THEN YOU MUST COMMENT OUT LINE 40 IN THE R SCRIPT IN STEP 2**
+3) Phenotype data for all available phenotypes (these should exactly match the cases and controls used for the GWAS). As phenotypes are likely to be coded in PLINK .pheno file format (2,1,-9 coding), we provide code in the pre-step which will recode the phenotype such that cases = 1, controls = 0 and those with missing phenotypes are NA. 
 
 4) Complete covariate data (these should be the exact covariates that were used when running the GWAS). Please do not include age or sex. 
-
-**FIDs in the PLINK, phenotype, and covariate files should be updated if necessary. This is described below.**
 
 ## Pre-Step: Relatives Identification and Filtering
 
@@ -36,7 +34,7 @@ The PRS tests should only be performed in a subset of your sample that has no mo
 
 To determine relatedness, please use [KING's kinship inference](https://www.kingrelatedness.com/manual.shtml#WITHIN) to get kinship values amongst individuals in your cohort who are third-degree relatives or closer. The KING output file (suffix .kin0) should then be used to ID relatives and perform filtering with the script [id_rels_and_filter.R](https://github.com/sarahcolbert/PGC_SUI_PRS/blob/main/id_rels_and_filter.R). **Every individual must have a unique IID in every file for all of these script to work.** 
 
-This script will update your phenotype file to the correct FIDs and remove the appropriate related individuals. **The FIDs and set of individuals in your PLINK and covariate files may therefore not match, but this is okay and will be dealth with in step 2.** 
+This script will update your phenotype file to the correct FIDs and remove the appropriate related individuals. **The FIDs and set of individuals in your PLINK and covariate files may therefore not match, but this is okay and will be dealt with in step 2.** 
 
 ## Step 1: Score individuals using PLINK
 
