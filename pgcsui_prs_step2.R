@@ -20,7 +20,7 @@ library(boot)
 ## please create the following variables
 target_name <- "target" ## this is your 5 character cohort code (same as what was used in the weights file sent to you)
 ancestry <- "eur" ## this is the 3 character ancestry code (same as what was used in the weights file sent to you: afr, eas, eur, or lat)
-phenotype <- "phenox" ## this is the phenotype code (either si, sa, or sd)
+phenotype <- "phenox" ## this is the prs phenotype code (either si, sa, or sd)
 phe_col <- "MYPHENO" ## this is the name of the phenotype column in your phenotype file (incase it is not the same as the phenotype above)
 analyst <- "initials" ## this is the analyst's initials
 out_dir <- "/my/path/output/" ## this is the output directory for the results file

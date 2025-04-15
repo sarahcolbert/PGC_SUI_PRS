@@ -23,8 +23,8 @@ If you encounter any issues or have any questions please reach out to Sarah Colb
 
 2) Imputed allele dosages or best guess genotypes (imputed allele dosages converted to hard calls) in plink binary format are both fine. Please only include individuals who were included in the GWAS. 
 
-3) Phenotype data for all available phenotypes (these should exactly match the cases and controls used for the GWAS). As phenotypes are likely to be coded in PLINK .pheno file format (2,1,-9 coding), we provide code in step 2 which will recode the phenotype such that cases = 1, controls = 0 and those with missing phenotypes are NA. **IF THE PHENOTYPE IS ALREADY CODED CORRECTLY (1,0,NA) THEN YOU MUST COMMENT OUT LINE 40 IN THE R SCRIPT IN STEP 2**
-
+3) Phenotype data for all available phenotypes (these should exactly match the cases and controls used for the GWAS). As phenotypes are likely to be coded in PLINK .pheno file format (2,1,-9 coding), we provide code in step 2 which will recode the phenotype such that cases = 1, controls = 0 and those with missing phenotypes are NA. **IF THE PHENOTYPE IS ALREADY CODED CORRECTLY (1,0,NA) THEN YOU MUST COMMENT OUT LINE 40 IN THE R SCRIPT IN STEP 2.** For SA PRS testing, use SA B2 phenotypes if available; otherwise, use SA B1 phenotypes.
+ 
 4) Complete covariate data (these should be the exact covariates that were used when running the GWAS). Please do not include age or sex. 
 
 
