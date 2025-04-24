@@ -90,7 +90,7 @@ lR2 <- function(df, type) {
   R2N <- as.numeric(r2_nakagawa(prs_model)$R2_marginal-r2_nakagawa(base_model)$R2_marginal[[1]])
 
   ## set some variables that will be used to calc liability R2
-  K <- ifelse(phenotype=="si", 0.09, ifelse(phenotype=="sa", 0.02, ifelse(phenotype=="sd", 0.001, NA))) ## sets population prevalence
+  K <- ifelse(phenotype=="si", 0.09, ifelse(phenotype=="sa", 0.02, ifelse(phenotype=="sd", 0.002, NA))) ## sets population prevalence
   N <- nrow(df)
   N_cases <- length(which(df[[phe_col]] == 1))
   N_controls <- N-N_cases
