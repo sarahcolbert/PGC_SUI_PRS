@@ -20,8 +20,9 @@ library(boot)
 ## please create the following variables
 target_name <- "target" ## this is your 5 character cohort code (same as what was used in the weights file sent to you)
 ancestry <- "eur" ## this is the 3 character ancestry code (same as what was used in the weights file sent to you: afr, eas, eur, or lat)
-phenotype <- "phenox" ## this is the prs phenotype code (either si, sa, or sd)
+phenotype <- "phenox" ## this is the outcome phenotype's code (either si, sa, or sd)
 phe_col <- "MYPHENO" ## this is the name of the phenotype column in your phenotype file (incase it is not the same as the phenotype above)
+prs_phenotype <- "prs_phenox" ## this is the prs phenotype's code (either si, sa, or sd) (this is likely the same as the "phenotype" above unless you are testing SD ~ SA PRS)
 analyst <- "initials" ## this is the analyst's initials
 out_dir <- "/my/path/output/" ## this is the output directory for the results file
 
@@ -243,5 +244,12 @@ prs_results <- cbind("cohort" = target_name,
 ## Generate results file -----------------------------
 ## -----------------------------------------------------------
 
+## set results file name according to outcome and prs phenotype
+if(phenotype==prs_phenotype){
+  outname <- paste0(out_dir, "/", target_name, "_", ancestry, "_", phenotype, "_", analyst, format(Sys.Date(),"_%Y%m%d"), "_prs_results.csv")
+}
+if(phenotype!=prs_phenotype){
+  outname <- paste0(out_dir, "/", target_name, "_", ancestry, "_", phenotype, "_", analyst, format(Sys.Date(),"_%Y%m%d"), "_", prs_phenotype, "prs_results.csv")
+}
 ## save the results in specified output directory
-write.csv(prs_results, paste0(out_dir, "/", target_name, "_", ancestry, "_", phenotype, "_", analyst, format(Sys.Date(),"_%Y%m%d"), "_prs_results.csv"), row.names = F) 
+write.csv(prs_results, outname, row.names = F) 
