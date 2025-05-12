@@ -30,7 +30,7 @@ phe_col <- "MYPHENO"
 ## please remove the mutate() line if your phenotype is already correctly coded with 0,1,NA
 meta <- read.table("./path/to/original_phenos.txt", h = T) %>% 
   rename("PHENO"=all_of(phe_col)) %>% 
-  #mutate(PHENO = ifelse(PHENO == 1, 0, ifelse(PHENO == 2, 1, NA))) %>% ## (remove this line if already coded correctly!!) 
+  mutate(PHENO = ifelse(PHENO == 1, 0, ifelse(PHENO == 2, 1, NA))) %>% ## (remove this line if already coded correctly!!) 
   filter(!is.na(PHENO)) %>% 
   select(FID, IID, PHENO) %>% 
   mutate(FID=IID) ## reassign FID to each unique IID
