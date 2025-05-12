@@ -62,9 +62,9 @@ covariates <- "C1 + C2 + C3 + C4 + C6 + C8 + C14 + C16"
 
 ## don't need to edit anything else in this chunk
 ## make model with PRS + covars
-prs_model_text <- paste0(phe_col, " ~ scale(SCORE) + ", covariates)
+prs_model_text <- paste0(phe_col, " ~ scale(SCORE) + ", covariates, " + (1 | FID)")
 ## make model without PRS
-base_model_text <- paste0(phe_col, " ~ ", covariates)
+base_model_text <- paste0(phe_col, " ~ ", covariates, " + (1 | FID)”)
 
 ## make sure that going forward for all other calcs we only use individuals that were included in full regression (i.e. have all vars available)
 complete_rows <- which(complete.cases(joint_df[, all.vars(as.formula(prs_model_text))]))
