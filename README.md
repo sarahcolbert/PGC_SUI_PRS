@@ -1,7 +1,7 @@
 # Polygenic Risk Scoring Protocol for PGC SUI
 This repository details a Standard Operating Procedure for the data analysts that will be performing polygenic risk score analyses in individual PGC SUI cohorts. We provide a fully automated analysis pipeline that will analyze and format the results to be returned.
 
-The following analyses should be repeated for each phenotype available in your sample. Analyses should also be conducted separately for each genetic ancestry available in your sample. If you have related individuals in your sample, please refer to the [README_relateds.md](https://github.com/sarahcolbert/PGC_SUI_PRS/blob/main/README_relateds.md) instead.
+The following analyses should be repeated for each phenotype available in your sample. Analyses should also be conducted separately for each genetic ancestry available in your sample. If you have related individuals in your sample, there are two options. The first would be to remove second degree relatives (or whatever degree of relatedness is optimal for your sample), while preferentially retaining cases, which can be done using the [prune_relateds.R script](https://github.com/sarahcolbert/PGC_SUI_PRS/blob/main/prune_relateds.R). The second option is to retain some related individuals and account for FID in a mixed effects model. To implement option 2, please refer to the [README_relateds.md](https://github.com/sarahcolbert/PGC_SUI_PRS/blob/main/README_relateds.md) instead.
 
 If you encounter any issues or have any questions please reach out to Sarah Colbert (sarah.colbert@icahn.mssm.edu)
 
